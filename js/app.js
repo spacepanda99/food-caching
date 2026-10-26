@@ -1,5 +1,6 @@
 import { FOODS, FOOD_BY_ID, inSeason, seasonLabel, foodIcon } from './foods.js';
-import { listCaches, addCache, addLog, deleteCache } from './store.js';
+import { listCaches, addCache, addLog, deleteCache, listExternalLogs } from './store.js';
+import { fetchINat, fetchOSM } from './sources.js';
 
 const L = window.L;
 
@@ -17,7 +18,10 @@ const STATUS = {
 };
 
 const state = {
-  caches: [],
+  caches: [],                 // added by people on this device
+  imported: new Map(),        // id -> spot from iNaturalist / OpenStreetMap
+  extLogs: {},                // visit logs for imported spots
+
   selectedFoods: new Set(),   // empty = show all
   seasonOnly: false,
   me: null,                   // { lat, lng, accuracy }
@@ -57,7 +61,18 @@ function focusOn(lat, lng, zoom = map.getZoom(), sheetOpen = true) {
   map.setView(map.unproject(p, zoom), zoom);
 }
 
-const cacheLayer = L.layerGroup().addTo(map);
+const cacheLayer = (L.markerClusterGroup
+  ? L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 48,
+      disableClusteringAtZoom: 18,
+      iconCreateFunction: cluster => L.divIcon({
+        className: '',
+        html: `<div class="cluster">${cluster.getChildCount()}</div>`,
+        iconSize: [40, 40],
+      }),
+    })
+  : L.layerGroup()).addTo(map);
 let meMarker = null;
 let meCircle = null;
 let newMarker = null;
@@ -113,8 +128,17 @@ function reference() {
   return state.me || map.getCenter();
 }
 
+function allCaches() {
+  const ext = [...state.imported.values()].map(c => ({ ...c, logs: state.extLogs[c.id] || [] }));
+  return state.caches.concat(ext);
+}
+
+function findCache(id) {
+  return allCaches().find(c => c.id === id);
+}
+
 function visibleCaches() {
-  return state.caches.filter(c => {
+  return allCaches().filter(c => {
     const food = FOOD_BY_ID[c.food] || FOOD_BY_ID.other;
     if (state.selectedFoods.size && !state.selectedFoods.has(food.id)) return false;
     if (state.seasonOnly && !inSeason(food)) return false;
@@ -156,14 +180,17 @@ $('seasonOnly').addEventListener('change', e => {
 });
 
 // ---------- Markers ----------
+const iconCache = {};
 function renderMarkers() {
   cacheLayer.clearLayers();
-  for (const c of visibleCaches()) {
+  const markers = visibleCaches().map(c => {
     const food = FOOD_BY_ID[c.food] || FOOD_BY_ID.other;
-    L.marker([c.lat, c.lng], { icon: pinIcon(food), title: c.title || food.name })
-      .on('click', () => openDetail(c.id))
-      .addTo(cacheLayer);
-  }
+    const icon = iconCache[food.id] ||= pinIcon(food);
+    return L.marker([c.lat, c.lng], { icon, title: c.title || food.name })
+      .on('click', () => openDetail(c.id));
+  });
+  if (cacheLayer.addLayers) cacheLayer.addLayers(markers);
+  else markers.forEach(m => m.addTo(cacheLayer));
 }
 
 // ---------- List view ----------
@@ -171,16 +198,17 @@ function renderList() {
   state.view = 'list';
   state.openId = null;
   const ref = reference();
-  const items = visibleCaches()
+  const all = visibleCaches()
     .map(c => ({ c, d: distanceMeters(ref, c) }))
     .sort((a, b) => a.d - b.d);
+  const items = all.slice(0, 60);
 
   const where = state.me ? 'from you' : 'from the map center';
-  let html = `<h2>Nearby caches</h2>
-    <p class="sub">${items.length} ${items.length === 1 ? 'cache' : 'caches'}${items.length ? `, closest first (distance ${where})` : ''}</p>`;
+  let html = `<h2>Wild food nearby</h2>
+    <p class="sub">${all.length} ${all.length === 1 ? 'spot' : 'spots'}${all.length ? `, closest first (distance ${where})` : ''}${all.length > items.length ? `. Showing the nearest ${items.length}.` : ''}</p>`;
 
   if (!items.length) {
-    const filtered = state.caches.length > 0;
+    const filtered = state.caches.length + state.imported.size > 0;
     html += `<div class="empty"><span class="big">🌱</span>
       ${filtered
         ? 'No caches match these filters.'
@@ -213,7 +241,7 @@ sheetBody.addEventListener('click', e => {
 
 // ---------- Detail view ----------
 function openDetail(id) {
-  const c = state.caches.find(x => x.id === id);
+  const c = findCache(id);
   if (!c) return renderList();
   state.view = 'detail';
   state.openId = id;
@@ -241,10 +269,13 @@ function openDetail(id) {
     <div class="facts">
       <span class="badge ${inSeason(food) ? 'ripe' : ''}">${inSeason(food) ? 'In season' : 'Out of season'} · ${seasonLabel(food)}</span>
       ${c.access ? `<span class="badge">${esc(ACCESS[c.access] || c.access)}</span>` : ''}
-      <span class="badge">Added ${timeAgo(c.createdAt)}</span>
+      ${c.createdAt ? `<span class="badge">Added ${timeAgo(c.createdAt)}</span>` : ''}
     </div>
+    ${c.photo ? `<figure class="photo"><img src="${esc(c.photo.url)}" alt="${esc(c.title || food.name)}" loading="lazy"><figcaption>${esc(c.photo.credit)}</figcaption></figure>` : ''}
+    ${c.sci ? `<p class="sub"><i>${esc(c.sci)}</i></p>` : ''}
     ${food.warning ? `<div class="warning-box">⚠️ ${esc(food.warning)}</div>` : ''}
     ${c.notes ? `<p class="notes">${esc(c.notes)}</p>` : ''}
+    ${c.source ? `<p class="source">From <a href="${esc(c.source.url)}" target="_blank" rel="noopener">${esc(c.source.name)}</a>${c.source.by ? `, spotted by ${esc(c.source.by)}` : ''}${c.seenOn ? ` on ${new Date(c.seenOn + 'T12:00').toLocaleDateString()}` : ''}. Make sure it's OK to pick here.</p>` : ''}
     <div class="actions">
       <a class="btn primary" href="${directions}" target="_blank" rel="noopener">🧭 Directions</a>
       <button class="btn" id="logBtn">✅ Log a visit</button>
@@ -310,7 +341,7 @@ function startAdd() {
     <form class="form" id="addForm">
       <label>What's growing?
         <select name="food" id="foodSelect">
-          ${FOODS.map(f => `<option value="${f.id}" ${f.id === foodId ? 'selected' : ''}>${f.icon === 'berry' ? '🫐' : f.icon} ${esc(f.name)}</option>`).join('')}
+          ${FOODS.map(f => `<option value="${f.id}" ${f.id === foodId ? 'selected' : ''}>${f.icon === 'berry' ? '🫐' : f.icon === 'fig' ? '🟣' : f.icon} ${esc(f.name)}</option>`).join('')}
         </select>
       </label>
       <label>Name <span class="hint">Optional. e.g. "Blackberry wall behind the library"</span>
@@ -411,11 +442,80 @@ $('locateBtn').onclick = () => {
 
 map.on('moveend', () => {
   if (state.view === 'list' && !state.me) renderList();
+  scheduleLoad();
 });
+
+// ---------- Public data (iNaturalist + OpenStreetMap) ----------
+// Each source loads on its own, so the fast one (iNaturalist) shows right
+// away and the slow one (OpenStreetMap's free server) fills in later.
+const SOURCES = [
+  { name: 'inat', fetch: fetchINat, minZoom: 11, timeout: 20000, boxes: [] },
+  { name: 'osm', fetch: fetchOSM, minZoom: 13, timeout: 45000, boxes: [] },
+];
+let loadTimer, loadCtrl, statusTimer;
+
+function setStatus(msg, busy = false) {
+  const el = $('status');
+  clearTimeout(statusTimer);
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+  el.classList.toggle('busy', busy);
+  if (msg && !busy) statusTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function scheduleLoad() {
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(loadArea, 700);
+}
+
+async function loadArea() {
+  if (map.getZoom() < 11) {
+    setStatus('Zoom in to find wild food here');
+    return;
+  }
+  const b = map.getBounds();
+  const view = { s: b.getSouth(), w: b.getWest(), n: b.getNorth(), e: b.getEast() };
+  const py = (view.n - view.s) * 0.25, px = (view.e - view.w) * 0.25;
+  const box = { s: view.s - py, w: view.w - px, n: view.n + py, e: view.e + px };
+  const contains = f => f.s <= view.s && f.w <= view.w && f.n >= view.n && f.e >= view.e;
+
+  const todo = SOURCES.filter(src => map.getZoom() >= src.minZoom && !src.boxes.some(contains));
+  if (!todo.length) return;
+
+  loadCtrl?.abort();
+  const ctrl = loadCtrl = new AbortController();
+  const mainSource = todo.find(src => src.name === 'inat');
+  setStatus(mainSource ? 'Finding wild food nearby…' : '', !!mainSource);
+
+  const run = async src => {
+    const signal = AbortSignal.any && AbortSignal.timeout
+      ? AbortSignal.any([ctrl.signal, AbortSignal.timeout(src.timeout)])
+      : ctrl.signal;
+    try {
+      const spots = await src.fetch(box, signal);
+      if (ctrl.signal.aborted) return;
+      for (const spot of spots) state.imported.set(spot.id, spot);
+      // iNaturalist returns at most 200 per request. If we hit that, don't
+      // mark the area done, so zooming in fetches a closer, fuller set.
+      if (!spots.full) src.boxes.push(box);
+      renderMarkers();
+      if (state.view === 'list') renderList();
+      if (src === mainSource) {
+        const inView = visibleCaches().filter(c => b.contains([c.lat, c.lng])).length;
+        setStatus(inView ? `${inView} wild food ${inView === 1 ? 'spot' : 'spots'} here` : 'No wild food found here yet');
+      }
+    } catch (err) {
+      if (ctrl.signal.aborted) return;
+      if (src === mainSource) setStatus('Couldn\'t load wild food spots right now');
+    }
+  };
+  await Promise.all(todo.map(run));
+}
 
 // ---------- Start ----------
 async function reload() {
   state.caches = await listCaches();
+  state.extLogs = await listExternalLogs();
   renderMarkers();
 }
 

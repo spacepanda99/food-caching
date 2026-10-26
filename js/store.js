@@ -40,13 +40,34 @@ export async function addCache({ food, title, notes, access, lat, lng }) {
   return cache;
 }
 
+// Visit logs for spots that came from public data (iNaturalist, OSM).
+const EXT_KEY = 'foodcaching.extlogs.v1';
+
+function readExt() {
+  try {
+    const m = JSON.parse(localStorage.getItem(EXT_KEY) || '{}');
+    return m && typeof m === 'object' ? m : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function listExternalLogs() {
+  return readExt();
+}
+
 export async function addLog(cacheId, { status, note }) {
+  const log = { status, note, at: new Date().toISOString() };
   const list = read();
   const cache = list.find(c => c.id === cacheId);
-  if (!cache) throw new Error('Cache not found');
-  cache.logs.unshift({ status, note, at: new Date().toISOString() });
-  write(list);
-  return cache;
+  if (cache) {
+    cache.logs.unshift(log);
+    write(list);
+    return;
+  }
+  const ext = readExt();
+  (ext[cacheId] ||= []).unshift(log);
+  localStorage.setItem(EXT_KEY, JSON.stringify(ext));
 }
 
 export async function deleteCache(cacheId) {

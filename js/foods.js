@@ -6,7 +6,11 @@ export const FOODS = [
   { id: 'raspberry',   name: 'Raspberries',   icon: 'berry', color: '#c2185b', months: [6, 7, 8] },
   { id: 'salmonberry', name: 'Salmonberries', icon: 'berry', color: '#f28c28', months: [5, 6] },
   { id: 'mulberry',    name: 'Mulberries',    icon: 'berry', color: '#5b2a86', months: [5, 6, 7] },
-  { id: 'elderberry',  name: 'Elderberries',  icon: 'berry', color: '#2b2140', months: [8, 9] },
+  { id: 'elderberry',  name: 'Elderberries',  icon: 'berry', color: '#2b2140', months: [8, 9],
+    warning: 'Cook elderberries before eating. Raw berries, leaves and stems can make you sick.' },
+  { id: 'thimbleberry', name: 'Thimbleberries', icon: 'berry', color: '#e0383e', months: [6, 7, 8] },
+  { id: 'currant',     name: 'Currants & gooseberries', icon: 'berry', color: '#b0283a', months: [6, 7, 8] },
+  { id: 'serviceberry', name: 'Serviceberries', icon: 'berry', color: '#4b3a7a', months: [6, 7] },
   { id: 'blueberry',   name: 'Blueberries',   icon: '🫐', color: '#3f51b5', months: [7, 8] },
   { id: 'huckleberry', name: 'Huckleberries', icon: '🫐', color: '#6a3d9a', months: [7, 8, 9] },
   { id: 'strawberry',  name: 'Wild strawberries', icon: '🍓', color: '#e53935', months: [5, 6] },
@@ -14,7 +18,9 @@ export const FOODS = [
   { id: 'pear',        name: 'Pears',         icon: '🍐', color: '#9ccc65', months: [8, 9, 10] },
   { id: 'plum',        name: 'Plums',         icon: '🍑', color: '#ad1457', months: [7, 8, 9] },
   { id: 'cherry',      name: 'Cherries',      icon: '🍒', color: '#b71c1c', months: [6, 7] },
-  { id: 'grape',       name: 'Grapes',        icon: '🍇', color: '#7b1fa2', months: [8, 9, 10] },
+  { id: 'fig',         name: 'Figs',          icon: 'fig',  color: '#6d3b6b', months: [8, 9, 10] },
+  { id: 'persimmon',   name: 'Persimmons',    icon: '🟠', color: '#ef6c00', months: [10, 11, 12] },
+  { id: 'grape',      name: 'Grapes',        icon: '🍇', color: '#7b1fa2', months: [8, 9, 10] },
   { id: 'citrus',      name: 'Citrus',        icon: '🍋', color: '#fbc02d', months: [11, 12, 1, 2, 3, 4] },
   { id: 'olive',       name: 'Olives',        icon: '🫒', color: '#689f38', months: [10, 11, 12] },
   { id: 'nuts',        name: 'Nuts',          icon: '🌰', color: '#8d5524', months: [8, 9, 10] },
@@ -42,6 +48,12 @@ export function seasonLabel(food) {
 
 // Small inline icon (HTML string) for a food.
 export function foodIcon(food, size = 22) {
+  if (food.icon === 'fig') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 22 28" aria-hidden="true">
+      <path d="M11 4 C11 2 12 1 13 1" stroke="#5f8f3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M11 4 C8 9 3 12 3 18 A8 8 0 0 0 19 18 C19 12 14 9 11 4 Z" fill="${food.color}"/>
+      <path d="M7 15 C7 19 9 22 12 23" stroke="#fff" stroke-width="1.4" opacity=".35" fill="none" stroke-linecap="round"/></svg>`;
+  }
   if (food.icon !== 'berry') {
     return `<span class="emoji" style="font-size:${size}px;line-height:1">${food.icon}</span>`;
   }

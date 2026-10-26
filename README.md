@@ -17,4 +17,7 @@ GPS needs `https://` or `localhost`.
 - `js/store.js`: where caches are saved. For now this is the browser's
   localStorage, so caches aren't shared between people yet. Swap this file
   for an online database to make them shared.
+- `js/sources.js`: loads wild food spots for the area on screen from
+  iNaturalist (photo-verified sightings) and OpenStreetMap (tagged trees),
+  and filters out inedible or poisonous look-alikes by species
 - `js/app.js`: map, filters, GPS, add/detail/log views
