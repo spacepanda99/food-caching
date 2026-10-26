@@ -1,6 +1,6 @@
-import { FOODS, FOOD_BY_ID, inSeason, seasonLabel, foodIcon } from './foods.js';
-import { listCaches, addCache, addLog, deleteCache, listExternalLogs } from './store.js';
-import { fetchINat, fetchOSM } from './sources.js';
+import { FOODS, FOOD_BY_ID, inSeason, seasonLabel, foodIcon } from './foods.js?v=202610251836';
+import { listCaches, addCache, addLog, deleteCache, listExternalLogs } from './store.js?v=202610251836';
+import { fetchINat, fetchOSM } from './sources.js?v=202610251836';
 
 const L = window.L;
 
@@ -27,6 +27,7 @@ const state = {
   me: null,                   // { lat, lng, accuracy }
   view: 'list',               // list | detail | add
   openId: null,
+  listLimit: 150,             // list rows shown before "Show more"
   firstFix: true,
 };
 
@@ -148,6 +149,8 @@ function visibleCaches() {
 
 function setSheet(expanded) {
   sheet.classList.toggle('expanded', expanded);
+  if (expanded) sheet.classList.remove('minimized');
+  $('sheetToggle').setAttribute('aria-label', expanded ? 'Lower the card' : 'Raise the card');
 }
 
 // ---------- Chips ----------
@@ -195,17 +198,19 @@ function renderMarkers() {
 
 // ---------- List view ----------
 function renderList() {
+  const keepScroll = state.view === 'list' ? sheetBody.scrollTop : 0;
   state.view = 'list';
   state.openId = null;
+  sheet.classList.add('list-view');
   const ref = reference();
   const all = visibleCaches()
     .map(c => ({ c, d: distanceMeters(ref, c) }))
     .sort((a, b) => a.d - b.d);
-  const items = all.slice(0, 60);
+  const items = all.slice(0, state.listLimit);
 
   const where = state.me ? 'from you' : 'from the map center';
   let html = `<h2>Wild food nearby</h2>
-    <p class="sub">${all.length} ${all.length === 1 ? 'spot' : 'spots'}${all.length ? `, closest first (distance ${where})` : ''}${all.length > items.length ? `. Showing the nearest ${items.length}.` : ''}</p>`;
+    <p class="sub">${all.length} ${all.length === 1 ? 'spot' : 'spots'}${all.length ? `, closest first (distance ${where})` : ''}</p>`;
 
   if (!items.length) {
     const filtered = state.caches.length + state.imported.size > 0;
@@ -230,11 +235,20 @@ function renderList() {
         <span class="dist">${formatDistance(d)}</span>
       </button></li>`;
     }).join('') + '</ul>';
+    if (all.length > items.length) {
+      html += `<button class="btn more-btn" id="moreBtn">Show more (${all.length - items.length} left)</button>`;
+    }
   }
   sheetBody.innerHTML = html;
+  sheetBody.scrollTop = keepScroll; // new data or a GPS update shouldn't jump the list
 }
 
 sheetBody.addEventListener('click', e => {
+  if (e.target.closest('#moreBtn')) {
+    state.listLimit += 150;
+    renderList();
+    return;
+  }
   const item = e.target.closest('.cache-item');
   if (item) openDetail(item.dataset.id);
 });
@@ -245,6 +259,8 @@ function openDetail(id) {
   if (!c) return renderList();
   state.view = 'detail';
   state.openId = id;
+  sheet.classList.remove('list-view');
+  sheetBody.scrollTop = 0;
   const food = FOOD_BY_ID[c.food] || FOOD_BY_ID.other;
   const dist = state.me ? `${formatDistance(distanceMeters(state.me, c))} away` : '';
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}&travelmode=walking`;
@@ -325,6 +341,7 @@ function showLogForm(id) {
 // ---------- Add a cache ----------
 function startAdd() {
   state.view = 'add';
+  sheet.classList.remove('list-view');
   document.body.classList.add('adding');
   const start = state.me || map.getCenter();
   const foodId = state.selectedFoods.size === 1 ? [...state.selectedFoods][0] : 'blackberry';
@@ -404,9 +421,15 @@ $('sheetHandle').onclick = () => {
   setSheet(!sheet.classList.contains('expanded'));
 };
 
+$('sheetToggle').onclick = () => {
+  if (ignoreHandleClick) return;
+  if (window.innerWidth >= 820) sheet.classList.toggle('minimized');
+  else setSheet(!sheet.classList.contains('expanded'));
+};
+
 sheet.addEventListener('touchstart', e => {
   if (window.innerWidth >= 820 || e.touches.length !== 1) return;
-  const fromHandle = !!e.target.closest('.sheet-handle');
+  const fromHandle = !!e.target.closest('.sheet-top');
   // From the content, only start a drag when it's scrolled to the top,
   // so normal scrolling inside the card still works.
   if (!fromHandle && sheetBody.scrollTop > 0) return;
@@ -424,7 +447,8 @@ sheet.addEventListener('touchmove', e => {
     sheet.classList.add('dragging');
   }
   e.preventDefault();
-  const h = Math.max(90, Math.min(window.innerHeight * 0.85, drag.h0 - dy));
+  const maxH = window.innerHeight - sheet.parentElement.querySelector('#map').getBoundingClientRect().top - 8;
+  const h = Math.max(90, Math.min(maxH, drag.h0 - dy));
   sheet.style.height = `${h}px`;
 }, { passive: false });
 

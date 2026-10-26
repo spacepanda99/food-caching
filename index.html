@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="img/mark.svg">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/app.css?v=202610251836">
 </head>
 <body>
   <header class="topbar">
@@ -37,7 +37,12 @@
   </div>
 
   <section class="sheet" id="sheet" aria-live="polite">
-    <button class="sheet-handle" id="sheetHandle" aria-label="Expand or collapse list"></button>
+    <div class="sheet-top">
+      <button class="sheet-handle" id="sheetHandle" aria-label="Raise or lower the card"></button>
+      <button class="sheet-toggle" id="sheetToggle" aria-label="Lower the card">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
     <div class="sheet-body" id="sheetBody"></div>
   </section>
 
@@ -46,6 +51,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=202610251836"></script>
 </body>
 </html>
