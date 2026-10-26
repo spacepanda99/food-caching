@@ -390,10 +390,58 @@ function endAdd() {
 
 map.on('click', e => {
   if (state.view === 'add' && newMarker) newMarker.setLatLng(e.latlng);
+  else if (sheet.classList.contains('expanded')) setSheet(false); // tap the map to lower the card
 });
 
 $('addBtn').onclick = startAdd;
-$('sheetHandle').onclick = () => setSheet(!sheet.classList.contains('expanded'));
+
+// ---------- Bottom sheet: tap or swipe the card up and down (phones) ----------
+let drag = null;
+let ignoreHandleClick = false;
+
+$('sheetHandle').onclick = () => {
+  if (ignoreHandleClick) return;
+  setSheet(!sheet.classList.contains('expanded'));
+};
+
+sheet.addEventListener('touchstart', e => {
+  if (window.innerWidth >= 820 || e.touches.length !== 1) return;
+  const fromHandle = !!e.target.closest('.sheet-handle');
+  // From the content, only start a drag when it's scrolled to the top,
+  // so normal scrolling inside the card still works.
+  if (!fromHandle && sheetBody.scrollTop > 0) return;
+  drag = { y0: e.touches[0].clientY, h0: sheet.getBoundingClientRect().height, fromHandle, active: false };
+}, { passive: true });
+
+sheet.addEventListener('touchmove', e => {
+  if (!drag) return;
+  const dy = e.touches[0].clientY - drag.y0;
+  if (!drag.active) {
+    if (Math.abs(dy) < 8) return;
+    // Dragging up on the content is a scroll, not a sheet drag.
+    if (!drag.fromHandle && dy < 0 && sheet.classList.contains('expanded')) { drag = null; return; }
+    drag.active = true;
+    sheet.classList.add('dragging');
+  }
+  e.preventDefault();
+  const h = Math.max(90, Math.min(window.innerHeight * 0.85, drag.h0 - dy));
+  sheet.style.height = `${h}px`;
+}, { passive: false });
+
+function endDrag(e) {
+  const d = drag;
+  drag = null;
+  if (!d || !d.active) return;
+  const dy = (e.changedTouches[0]?.clientY ?? d.y0) - d.y0;
+  sheet.classList.remove('dragging');
+  sheet.style.height = '';
+  if (dy > 40) setSheet(false);
+  else if (dy < -40) setSheet(true);
+  ignoreHandleClick = true; // the tap that ends a drag shouldn't also toggle
+  setTimeout(() => { ignoreHandleClick = false; }, 350);
+}
+sheet.addEventListener('touchend', endDrag);
+sheet.addEventListener('touchcancel', endDrag);
 
 // ---------- GPS ----------
 function onPosition(pos) {
