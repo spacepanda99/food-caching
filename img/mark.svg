@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80" role="img" aria-label="Food Caching">
+<path d="M32 79 C32 79 10 55 10 38 A22 22 0 0 1 54 38 C54 55 32 79 32 79 Z" fill="#1f3f27" opacity=".35"/>
+<path d="M30 76 C30 76 8 52 8 35 A22 22 0 0 1 52 35 C52 52 30 76 30 76 Z" fill="#8e3b6e" stroke="#fbf7ee" stroke-width="3.5" stroke-linejoin="round"/>
+<circle cx="24" cy="26" r="5.6" fill="#4a1d3f"/><circle cx="22.4" cy="24.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="36" cy="26" r="5.6" fill="#4a1d3f"/><circle cx="34.4" cy="24.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="18" cy="35" r="5.6" fill="#4a1d3f"/><circle cx="16.4" cy="33.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="30" cy="35" r="5.6" fill="#4a1d3f"/><circle cx="28.4" cy="33.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="42" cy="35" r="5.6" fill="#4a1d3f"/><circle cx="40.4" cy="33.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="24" cy="44" r="5.6" fill="#4a1d3f"/><circle cx="22.4" cy="42.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="36" cy="44" r="5.6" fill="#4a1d3f"/><circle cx="34.4" cy="42.2" r="1.6" fill="#fff" opacity=".45"/><circle cx="30" cy="52" r="5.6" fill="#4a1d3f"/><circle cx="28.4" cy="50.2" r="1.6" fill="#fff" opacity=".45"/>
+<path d="M30 13 C30 9 31 6 33 3" stroke="#8d5524" stroke-width="3" stroke-linecap="round" fill="none"/>
+<path d="M31 12 C35 2 47 0 54 4 C49 12 39 15 31 12 Z" fill="#a5d66f" stroke="#5f8f3a" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M31 12 C29 5 20 1 12 4 C16 11 24 14 31 12 Z" fill="#8cc152" stroke="#5f8f3a" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

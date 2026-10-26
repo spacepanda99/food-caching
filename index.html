@@ -6,19 +6,19 @@
   <title>Food Caching: find wild food near you</title>
   <meta name="description" content="Like geocaching, but for food. Find and share wild blackberries, apple trees, herbs and more growing near you.">
   <meta name="theme-color" content="#2f5d3a">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="img/mark.svg">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">🧺</span>
-      <span class="brand-name">Food Caching</span>
-    </div>
+    <a class="brand" href="./" aria-label="Food Caching home">
+      <img class="brand-mark" src="img/mark.svg" alt="">
+      <img class="brand-name" src="img/wordmark.svg" alt="Food Caching">
+    </a>
     <label class="season-toggle">
       <input type="checkbox" id="seasonOnly">
-      <span>In season now</span>
+      <span>In season</span>
     </label>
   </header>
 
